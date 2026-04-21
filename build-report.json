@@ -1,0 +1,113 @@
+{
+  "project": "RoboBuddy",
+  "version": "1.0.0",
+  "generatedAt": "2026-04-21",
+  "runtime": {
+    "node": "v24.13.0",
+    "moduleType": "ESM"
+  },
+  "files": [
+    {
+      "name": "index.html",
+      "role": "Front-end entry point",
+      "lines": 1768,
+      "sizeBytes": 84105
+    },
+    {
+      "name": "server.js",
+      "role": "Node.js HTTP server / Anthropic proxy (legacy)",
+      "lines": 142,
+      "sizeBytes": 5289
+    },
+    {
+      "name": "package.json",
+      "role": "Project manifest",
+      "lines": 8,
+      "sizeBytes": 78
+    },
+    {
+      "name": "wrangler.json",
+      "role": "Cloudflare Workers/Pages deployment config",
+      "lines": 7,
+      "sizeBytes": 104
+    },
+    {
+      "name": "brief.txt",
+      "role": "Project summary",
+      "lines": 35,
+      "sizeBytes": 1487
+    },
+    {
+      "name": "build-report.json",
+      "role": "This build report",
+      "lines": null,
+      "sizeBytes": null
+    }
+  ],
+  "dependencies": {
+    "runtime": [],
+    "cdn": [
+      { "name": "Tailwind CSS",    "version": "latest (CDN)",  "url": "https://cdn.tailwindcss.com" },
+      { "name": "pdf.js",          "version": "3.11.174",      "url": "https://cdnjs.cloudflare.com" },
+      { "name": "mammoth.js",      "version": "1.6.0",         "url": "https://cdnjs.cloudflare.com" },
+      { "name": "Google Fonts",    "version": "N/A",           "url": "https://fonts.googleapis.com" },
+      { "name": "Material Symbols","version": "N/A",           "url": "https://fonts.googleapis.com" }
+    ]
+  },
+  "api": {
+    "provider": "Anthropic",
+    "model": "claude-haiku-4-5-20251001",
+    "endpoint": "https://api.anthropic.com/v1/messages",
+    "streaming": true,
+    "authMethod": "x-api-key header (browser direct)",
+    "directBrowserAccess": true,
+    "directBrowserHeader": "anthropic-dangerous-direct-browser-access: true",
+    "keyStorage": "localStorage (client-side only)"
+  },
+  "deployment": {
+    "cloudflare": {
+      "config": "wrangler.json",
+      "assetsDirectory": ".",
+      "deployCommand": "wrangler pages deploy"
+    },
+    "local": {
+      "startCommand": "npm start",
+      "port": 3000
+    }
+  },
+  "features": [
+    "Live streaming chat",
+    "PDF upload and parsing",
+    "DOCX upload and parsing",
+    "Notes-aware chat context",
+    "Flashcard generator",
+    "API key management (save / reset)",
+    "Direct browser-to-Anthropic API calls"
+  ],
+  "server": {
+    "port": 3000,
+    "startCommand": "npm start",
+    "routes": [
+      { "method": "GET",  "path": "/",                 "description": "Serves index.html" },
+      { "method": "GET",  "path": "/*",                "description": "Static file serving" },
+      { "method": "POST", "path": "/api/chat",          "description": "Anthropic proxy (legacy)" },
+      { "method": "GET",  "path": "/api/validate-key",  "description": "Key validation endpoint" }
+    ]
+  },
+  "issues": [
+    {
+      "id": "FIX-001",
+      "severity": "critical",
+      "status": "resolved",
+      "description": "HTTP 405 on POST /api/chat — static file server does not handle POST requests",
+      "resolution": "Updated fetch calls to target Anthropic API directly with anthropic-dangerous-direct-browser-access header"
+    },
+    {
+      "id": "FIX-002",
+      "severity": "low",
+      "status": "resolved",
+      "description": "Front-end entry point named robobuddy.html, conflicting with standard web server conventions",
+      "resolution": "Renamed robobuddy.html to index.html for compatibility with static hosts and Cloudflare Pages"
+    }
+  ]
+}
