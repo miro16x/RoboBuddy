@@ -1,0 +1,28 @@
+RoboBuddy — AI Study Assistant
+================================
+
+A single-page AI study assistant that connects to Anthropic's Claude API
+(claude-haiku-4-5-20251001) to help students with any subject.
+
+Files
+-----
+robobuddy.html  Main front-end — all UI, styles, and client-side logic in one file.
+server.js       Lightweight Node.js HTTP server (port 3000) that serves the HTML
+                and can proxy API requests to Anthropic (originally used before the
+                app was updated to call the Anthropic API directly from the browser).
+package.json    Minimal config — sets type "module" and defines `npm start`.
+
+Features
+--------
+- Live chat with RoboBuddy (streaming responses)
+- File upload (PDF / DOCX) to use your own notes as context
+- Flashcard generator from uploaded notes or a typed topic
+- API key entered in-browser, stored in localStorage only
+
+Usage
+-----
+Open robobuddy.html directly in a browser, enter a valid Anthropic API key
+(sk-ant-...) from console.anthropic.com, and start chatting.
+
+Alternatively, run the Node server for local hosting:
+  npm start  →  http://localhost:3000
