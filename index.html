@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RoboBuddy — AI Study Assistant</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600&family=Fredoka+One&display=swap" rel="stylesheet">
+
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+  <!-- PDF & DOCX parsers -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary:   '#7C3AED',
+            secondary: '#EDE9FE',
+            accent:    '#6D28D9',
+            surface:   '#F8FAFC',
+            muted:     '#64748B',
+          },
+          fontFamily: {
+            heading: ['Nunito', 'sans-serif'],
+            body:    ['Inter', 'sans-serif'],
+            accent:  ['Fredoka One', 'cursive'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+/* ── Design tokens ── */
+:root {
+  --primary:   #7C3AED;
+  --accent:    #6D28D9;
+  --surface:   #F8FAFC;
+  --bg:        #FFFFFF;
+  --text:      #0F172A;
+  --muted:     #64748B;
+  --border:    #E2E8F0;
+  --shadow-sm: 0 1px 3px rgba(124,58,237,0.08),0 1px 2px rgba(124,58,237,0.05);
+  --shadow-md: 0 4px 16px rgba(124,58,237,0.11),0 2px 6px rgba(124,58,237,0.07);
+  --shadow-lg: 0 10px 32px rgba(124,58,237,0.13),0 4px 12px rgba(124,58,237,0.08);
+  --shadow-xl: 0 20px 60px rgba(124,58,237,0.16),0 8px 24px rgba(124,58,237,0.10);
+  --c1: 330 100% 40%;
+  --c2: 140 100% 55%;
+  --c3: 210 100% 30%;
+  --c4:  60 100% 70%;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Inter', sans-serif; color: var(--text); background: var(--bg); overflow-x: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Scroll reveal ── */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.55s ease-out, transform 0.55s ease-out; }
+.reveal.visible { opacity: 1; transform: none; }
+.d1 { transition-delay: 0.1s; }
+.d2 { transition-delay: 0.2s; }
+.d3 { transition-delay: 0.3s; }
+.d4 { transition-delay: 0.4s; }
+
+/* ── Material Symbols ── */
+.material-symbols-outlined { font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
+.ms-fill { font-variation-settings: 'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24; }
+
+/* ════════════════════════════
+   NAVBAR
+════════════════════════════ */
+#navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 68px; display: flex; align-items: center; padding: 0 2rem;
+  transition: background .3s, box-shadow .3s, backdrop-filter .3s;
+}
+#navbar.scrolled {
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-sm);
+}
+#navbar.hero-zone .nav-logo { color: #fff; }
+#navbar.hero-zone .nav-logo .logo-icon { background: linear-gradient(135deg,#6D28D9,#7C3AED); }
+#navbar.hero-zone .nav-links a { color: rgba(255,255,255,0.75); }
+#navbar.hero-zone .nav-links a:hover { color: #fff; }
+#navbar.hero-zone .nav-cta { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); }
+#navbar.hero-zone .nav-cta:hover { background: rgba(255,255,255,0.22); }
+#navbar.hero-zone .hamburger span { background: rgba(255,255,255,0.8); }
+.nav-inner { max-width: 1200px; width: 100%; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+.nav-logo {
+  font-family: 'Fredoka One', cursive; font-size: 1.375rem; color: var(--primary);
+  text-decoration: none; display: flex; align-items: center; gap: .5rem;
+  transition: color .2s;
+}
+.nav-logo .logo-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg,var(--primary),#A78BFA);
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+}
+.nav-links { display: flex; align-items: center; gap: 2rem; }
+.nav-links a {
+  font-weight: 500; font-size: .9375rem; color: var(--text);
+  text-decoration: none; transition: color .15s;
+}
+.nav-links a:hover { color: var(--primary); }
+.nav-cta {
+  background: var(--primary); color: #fff;
+  padding: .625rem 1.5rem; border-radius: 9999px;
+  font-weight: 600; font-size: .9375rem; text-decoration: none; cursor: pointer;
+  border: none; transition: background .2s, box-shadow .2s, transform .2s;
+}
+.nav-cta:hover { background: #6D28D9; box-shadow: var(--shadow-md); transform: scale(1.03); }
+.hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+.hamburger span { display: block; width: 24px; height: 2px; background: var(--text); border-radius: 2px; transition: all .3s; }
+.mobile-menu {
+  display: none; position: fixed; top: 68px; left: 0; right: 0; z-index: 99;
+  background: rgba(255,255,255,.97); backdrop-filter: blur(16px);
+  padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);
+  flex-direction: column; gap: 1rem;
+}
+.mobile-menu.open { display: flex; }
+.mobile-menu a { font-weight: 500; color: var(--text); text-decoration: none; padding: .5rem 0; border-bottom: 1px solid var(--border); }
+
+/* ════════════════════════════
+   HERO
+════════════════════════════ */
+#hero {
+  position: relative; min-height: 100vh; overflow: hidden;
+  background: #000;
+  display: flex; align-items: center;
+  padding-top: 68px;
+}
+.hero-bg-grad {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, #1a1025 0%, #000 60%, #0a0a1a 100%);
+  pointer-events: none;
+}
+#hero-spotlight {
+  position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  transition: opacity .3s;
+  opacity: 0;
+}
+.hero-grid {
+  position: absolute; inset: 0; pointer-events: none; opacity: .035;
+  background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+.hero-inner {
+  position: relative; z-index: 2;
+  max-width: 1200px; width: 100%; margin: 0 auto;
+  padding: 5rem 2rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: rgba(255,255,255,.06); backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.1);
+  color: #C4B5FD; border-radius: 9999px;
+  padding: .375rem 1rem; font-size: .8125rem; font-weight: 600; font-family: 'Inter',sans-serif;
+  margin-bottom: 1.5rem;
+  animation: fadeUpHero .7s .1s ease-out both;
+}
+.badge-dot { width: 6px; height: 6px; background: #A78BFA; border-radius: 50%; box-shadow: 0 0 6px #A78BFA; animation: pulseDot 2s infinite; }
+@keyframes pulseDot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.6} }
+
+.hero-heading {
+  font-family: 'Nunito', sans-serif; font-weight: 900;
+  font-size: clamp(2.75rem,5.5vw,4.25rem);
+  line-height: 1.08; letter-spacing: -.025em;
+  color: #fff; margin-bottom: 1.25rem;
+  animation: fadeUpHero .7s .25s ease-out both;
+}
+.gradient-word {
+  position: relative; display: inline-flex; overflow: hidden;
+  background: #fff;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.gradient-word .blob {
+  pointer-events: none; position: absolute;
+  width: 30vw; height: 30vw;
+  mix-blend-mode: overlay; filter: blur(1rem);
+  border-radius: 37% 29% 27% 27% / 28% 25% 41% 37%;
+}
+.blob-1 { background: hsl(var(--c1)); animation: gradientBorder 6s ease-in-out infinite, g1 12s ease-in-out infinite alternate; }
+.blob-2 { background: hsl(var(--c2)); right:0;top:0; animation: gradientBorder 6s ease-in-out infinite, g2 12s ease-in-out infinite alternate; }
+.blob-3 { background: hsl(var(--c3)); bottom:0;left:0; animation: gradientBorder 6s ease-in-out infinite, g3 12s ease-in-out infinite alternate; }
+.blob-4 { background: hsl(var(--c4)); bottom:0;right:0; animation: gradientBorder 6s ease-in-out infinite, g4 12s ease-in-out infinite alternate; }
+@keyframes gradientBorder {
+  0%,100%{border-radius:37% 29% 27% 27%/28% 25% 41% 37%}
+  25%{border-radius:47% 29% 39% 49%/61% 19% 66% 26%}
+  50%{border-radius:57% 23% 47% 72%/63% 17% 66% 33%}
+  75%{border-radius:28% 49% 29% 100%/93% 20% 64% 25%}
+}
+@keyframes g1 { 0%,100%{top:0;right:0} 50%{top:50%;right:25%} 75%{top:25%;right:50%} }
+@keyframes g2 { 0%,100%{top:0;left:0} 60%{top:75%;left:25%} 85%{top:50%;left:50%} }
+@keyframes g3 { 0%,100%{bottom:0;left:0} 40%{bottom:50%;left:25%} 65%{bottom:25%;left:50%} }
+@keyframes g4 { 0%,100%{bottom:0;right:0} 50%{bottom:25%;right:40%} 90%{bottom:50%;right:25%} }
+
+.hero-sub {
+  font-size: 1.125rem; line-height: 1.72; color: #94A3B8;
+  margin-bottom: 2rem; max-width: 480px;
+  animation: fadeUpHero .7s .4s ease-out both;
+}
+.hero-btns {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+  animation: fadeUpHero .7s .55s ease-out both;
+}
+
+.btn-get-started {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%);
+  color: #fff; padding: .875rem 2rem; border-radius: 10px;
+  font-weight: 600; font-size: 1rem; border: none; cursor: pointer;
+  text-decoration: none; display: inline-flex; align-items: center;
+  transition: box-shadow .2s, transform .2s;
+  box-shadow: 0 4px 20px rgba(124,58,237,.4);
+}
+.btn-get-started:hover { box-shadow: 0 8px 30px rgba(124,58,237,.55); transform: scale(1.03); }
+.btn-get-started .label { margin-right: 2.5rem; transition: opacity .4s; white-space: nowrap; }
+.btn-get-started:hover .label { opacity: 0; }
+.btn-get-started .chevron-box {
+  position: absolute; right: 8px; top: 8px; bottom: 8px;
+  width: calc(25% - 8px); border-radius: 6px;
+  background: rgba(255,255,255,.18);
+  display: flex; align-items: center; justify-content: center;
+  transition: width .4s ease;
+}
+.btn-get-started:hover .chevron-box { width: calc(100% - 16px); }
+.btn-get-started:active { transform: scale(.97); }
+
+.btn-watch {
+  padding: .875rem 2rem; border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,.2);
+  color: rgba(255,255,255,.85); background: transparent; font-weight: 600; font-size: 1rem;
+  text-decoration: none; cursor: pointer;
+  transition: border-color .2s, background .2s;
+  display: inline-flex; align-items: center; gap: .5rem;
+}
+.btn-watch:hover { border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.05); }
+
+.hero-stats {
+  display: flex; gap: 2rem; margin-top: 2.5rem;
+  animation: fadeUpHero .7s .7s ease-out both;
+}
+.hero-stats .divider { width: 1px; background: rgba(255,255,255,.1); align-self: stretch; }
+.stat-num { font-family: 'Nunito',sans-serif; font-weight: 900; font-size: 1.875rem; color: #fff; }
+.stat-label { font-size: .8125rem; color: #64748B; margin-top: 2px; }
+
+.hero-scene-wrap {
+  position: relative; height: 600px;
+  animation: fadeUpHero .7s .2s ease-out both;
+}
+.glow-purple { position: absolute; bottom: -2rem; right: -2rem; width: 10rem; height: 10rem; background: rgba(124,58,237,.3); border-radius: 50%; filter: blur(3rem); pointer-events: none; }
+.glow-blue   { position: absolute; top: -2rem;   left: -2rem;  width: 10rem; height: 10rem; background: rgba(109,40,217,.3);  border-radius: 50%; filter: blur(3rem); pointer-events: none; }
+.hero-scene-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(124,58,237,.18) 0%, transparent 50%, rgba(109,40,217,.18) 100%);
+  border-radius: 24px; filter: blur(2.5rem);
+}
+.hero-scene-card {
+  position: relative; height: 100%;
+  border-radius: 24px; overflow: hidden;
+  background: linear-gradient(135deg, rgba(15,10,35,.6) 0%, rgba(10,10,30,.5) 100%);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.hero-scene-card canvas { width: 100% !important; height: 100% !important; }
+.scene-loader {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+}
+.loader-ring {
+  width: 44px; height: 44px;
+  border: 3px solid rgba(124,58,237,.2); border-top-color: #A78BFA;
+  border-radius: 50%; animation: spin .9s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+.hero-line {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);
+}
+@keyframes fadeUpHero { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+
+/* ════════════════════════════
+   TRUST STRIP
+════════════════════════════ */
+#trust {
+  padding: 2rem 0;
+  background: #F8FAFC;
+  border-bottom: 1px solid var(--border);
+}
+.trust-label {
+  text-align: center; font-size: .75rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: #94A3B8; margin-bottom: 1.25rem;
+}
+.trust-logos { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 2.5rem; opacity: .35; filter: grayscale(1); }
+.trust-logos span { font-family: 'Nunito',sans-serif; font-weight: 900; font-size: 1.125rem; color: var(--text); }
+
+/* ════════════════════════════
+   SHARED SECTION STYLES
+════════════════════════════ */
+section { padding: 5rem 0; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
+.section-tag {
+  display: inline-flex; align-items: center; gap: .375rem;
+  background: #F5F3FF; color: var(--primary); border-radius: 9999px;
+  padding: .3rem .875rem; font-size: .8125rem; font-weight: 600; margin-bottom: 1rem;
+}
+.section-heading {
+  font-family: 'Nunito',sans-serif; font-weight: 900;
+  font-size: clamp(1.875rem,3.5vw,2.625rem);
+  line-height: 1.2; letter-spacing: -.015em; color: var(--text); margin-bottom: 1rem;
+}
+.section-sub {
+  font-size: 1.0625rem; color: var(--muted); line-height: 1.7; max-width: 560px;
+}
+.center-head { text-align: center; }
+.center-head .section-sub { margin: 0 auto; }
+
+/* ════════════════════════════
+   FEATURES
+════════════════════════════ */
+#features { background: #fff; }
+.features-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr));
+  gap: 1.5rem; margin-top: 3.5rem;
+}
+.feature-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .25s, transform .25s;
+  position: relative; overflow: hidden;
+}
+.feature-card::before {
+  content:''; position:absolute; top:0;left:0;right:0; height:3px;
+  background: linear-gradient(90deg,var(--accent),var(--primary));
+  opacity: 0; transition: opacity .25s;
+}
+.feature-card:hover { box-shadow: var(--shadow-md); transform: translateY(-4px); }
+.feature-card:hover::before { opacity: 1; }
+.feature-icon {
+  width: 56px; height: 56px; border-radius: 14px;
+  background: linear-gradient(135deg,#F5F3FF,#EDE9FE);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; margin-bottom: 1.25rem;
+}
+.feature-card h3 { font-family: 'Nunito',sans-serif; font-weight: 800; font-size: 1.125rem; color: var(--text); margin-bottom: .5rem; }
+.feature-card p  { font-size: .9375rem; color: var(--muted); line-height: 1.65; }
+
+/* ════════════════════════════
+   HOW IT WORKS
+════════════════════════════ */
+#how-it-works { background: var(--surface); }
+.steps-grid {
+  display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+  gap: 2rem; margin-top: 3.5rem; position: relative;
+}
+.steps-grid::before {
+  content:''; position:absolute; top: 36px; left: calc(12.5% + 20px); right: calc(12.5% + 20px);
+  height: 2px; background: linear-gradient(90deg,var(--accent),var(--primary));
+  opacity: .2;
+}
+.step-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 20px; padding: 2rem 1.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .25s, transform .25s;
+  text-align: center;
+}
+.step-card:hover { box-shadow: var(--shadow-md); transform: translateY(-4px); }
+.step-num-wrap {
+  width: 56px; height: 56px; border-radius: 9999px; margin: 0 auto 1.25rem;
+  background: linear-gradient(135deg,var(--accent),var(--primary));
+  color: #fff; font-family: 'Nunito',sans-serif; font-weight: 900; font-size: 1.25rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.step-card h3 { font-family:'Nunito',sans-serif; font-weight:800; font-size:1.0625rem; color:var(--text); margin-bottom:.5rem; }
+.step-card p  { font-size:.9375rem; color:var(--muted); line-height:1.65; }
+
+/* ════════════════════════════
+   STUDY TOOLS
+════════════════════════════ */
+#study-tools { background: #fff; }
+.tools-layout {
+  display: grid; grid-template-columns: 260px 1fr;
+  gap: 2rem; margin-top: 3.5rem; align-items: start;
+}
+.tool-sidebar { display: flex; flex-direction: column; gap: .75rem; }
+.tool-tab {
+  display: flex; align-items: center; gap: .875rem;
+  padding: 1rem 1.25rem; border-radius: 14px;
+  border: 1.5px solid transparent; background: var(--surface);
+  cursor: pointer; transition: all .2s; text-align: left;
+}
+.tool-tab:hover { background: #F5F3FF; border-color: #DDD6FE; }
+.tool-tab.active { background: #F5F3FF; border-color: var(--primary); box-shadow: var(--shadow-sm); }
+.tool-tab-icon {
+  width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+  background: #fff; border: 1px solid var(--border);
+  transition: background .2s;
+}
+.tool-tab.active .tool-tab-icon { background: var(--primary); border-color: var(--primary); }
+.tool-tab.active .tool-tab-icon span { color: #fff !important; }
+.tool-tab-label { font-family:'Nunito',sans-serif; font-weight:800; font-size:.9375rem; color:var(--text); }
+.tool-tab-sub   { font-size:.8125rem; color:var(--muted); margin-top:.125rem; }
+
+.tool-panel-wrap { position: relative; min-height: 420px; }
+.tool-panel {
+  display: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 22px; padding: 2.25rem;
+  box-shadow: var(--shadow-lg);
+  position: relative; overflow: hidden;
+}
+.tool-panel::before {
+  content:''; position:absolute; top:0;left:0;right:0; height:4px;
+  background: linear-gradient(90deg,var(--accent),var(--primary));
+}
+.tool-panel.active { display: block; }
+.panel-title { font-family:'Nunito',sans-serif; font-weight:900; font-size:1.25rem; color:var(--text); margin-bottom:.5rem; }
+.panel-sub   { font-size:.9rem; color:var(--muted); margin-bottom:1.75rem; }
+
+.chat-log { display:flex; flex-direction:column; gap:.875rem; max-height:320px; overflow-y:auto; scroll-behavior:smooth; }
+.chat-row { display:flex; gap:.75rem; align-items:flex-start; }
+.chat-row.user { flex-direction:row-reverse; }
+.chat-av {
+  width:34px; height:34px; border-radius:9999px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:.8125rem;
+}
+.chat-av.bot  { background:linear-gradient(135deg,var(--accent),var(--primary)); color:#fff; }
+.chat-av.me   { background:#F1F5F9; color:var(--text); font-size:.75rem; }
+.bubble {
+  max-width:72%; padding:.75rem 1rem; border-radius:14px;
+  font-size:.9375rem; line-height:1.6;
+}
+.bubble.bot  { background:#fff; color:var(--text); box-shadow:var(--shadow-sm); border-radius:4px 14px 14px 14px; }
+.bubble.user { background:var(--primary); color:#fff; border-radius:14px 4px 14px 14px; }
+
+.upload-zone {
+  border: 2px dashed var(--border); border-radius: 16px;
+  padding: 1.25rem 1.5rem; margin-bottom: 1.75rem;
+  background: var(--surface); transition: border-color .2s, background .2s;
+}
+.upload-zone:hover, .upload-zone.drag-over { border-color: var(--primary); background: #F5F3FF; cursor: pointer; }
+.upload-idle { display:flex; align-items:center; gap:1rem; cursor:pointer; }
+.upload-icon { font-size:1.75rem; flex-shrink:0; }
+.upload-main { font-weight:600; font-size:.9375rem; color:var(--text); display:block; }
+.upload-link { color:var(--primary); text-decoration:underline; }
+.upload-formats { font-size:.75rem; color:var(--muted); margin-top:.2rem; display:block; }
+.upload-loading { display:flex; align-items:center; gap:.75rem; font-size:.875rem; color:var(--muted); }
+.upload-done { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.upload-filename { font-weight:600; font-size:.9375rem; color:var(--text); display:block; }
+.upload-chars { font-size:.75rem; color:var(--muted); margin-top:.1rem; display:block; }
+.upload-clear-btn {
+  margin-left:auto; background:none; border:1.5px solid var(--border);
+  border-radius:9999px; padding:.375rem .875rem;
+  font-size:.8125rem; font-weight:600; color:var(--muted); cursor:pointer; transition:all .2s;
+}
+.upload-clear-btn:hover { border-color:#DC2626; color:#DC2626; }
+
+.gen-btn {
+  display:inline-flex; align-items:center; gap:.625rem;
+  background:var(--primary); color:#fff; border:none; border-radius:9999px;
+  padding:.7rem 1.625rem; font-weight:700; font-size:.9375rem; cursor:pointer;
+  transition:background .2s, box-shadow .2s, transform .15s;
+  box-shadow:0 4px 16px rgba(124,58,237,.3);
+}
+.gen-btn:hover { background:var(--accent); box-shadow:0 6px 24px rgba(124,58,237,.4); transform:scale(1.03); }
+.gen-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
+
+.tool-text-input {
+  width:100%; border:1.5px solid var(--border); border-radius:10px;
+  padding:.7rem 1rem; font-size:.9375rem; color:var(--text);
+  font-family:'Inter',sans-serif; outline:none; background:#fff;
+  transition:border-color .2s; margin-bottom:.875rem;
+}
+.tool-text-input:focus { border-color:var(--primary); }
+textarea.tool-text-input { resize:vertical; line-height:1.6; border-radius:12px; }
+
+.panel-loading { display:flex; align-items:center; justify-content:center; gap:.75rem; padding:2.5rem 0; color:var(--muted); font-size:.9375rem; }
+
+.api-key-banner {
+  background:#F5F3FF; border:1.5px solid #DDD6FE;
+  border-radius:14px; padding:1.25rem; margin-bottom:1.25rem;
+}
+.api-key-label { font-weight:600; font-size:.875rem; color:var(--text); margin-bottom:.25rem; }
+.api-key-hint  { font-size:.775rem; color:var(--muted); line-height:1.5; }
+.api-key-input-row { display:flex; gap:.625rem; margin-top:.875rem; }
+.api-key-field {
+  flex:1; border:1.5px solid var(--border); border-radius:9px;
+  padding:.6rem 1rem; font-size:.875rem; color:var(--text);
+  outline:none; font-family:'Inter',sans-serif; background:#fff;
+}
+.api-key-field:focus { border-color:var(--primary); }
+.api-key-connect-btn {
+  background:var(--primary); color:#fff; border:none; border-radius:9px;
+  padding:.6rem 1.25rem; font-weight:600; font-size:.875rem;
+  cursor:pointer; white-space:nowrap; transition:background .2s;
+}
+.api-key-connect-btn:hover { background:var(--accent); }
+.api-key-reset-link {
+  font-size:.75rem; color:var(--muted); cursor:pointer;
+  text-decoration:underline; margin-top:.5rem; display:inline-block;
+}
+.api-key-reset-link:hover { color:var(--primary); }
+.chat-input-area {
+  display:none; gap:.625rem; margin-top:1rem; align-items:center;
+}
+.chat-text-input {
+  flex:1; border:1.5px solid var(--border); border-radius:9999px;
+  padding:.7rem 1.25rem; font-size:.9375rem; color:var(--text);
+  font-family:'Inter',sans-serif; outline:none; background:#fff;
+  transition:border-color .2s;
+}
+.chat-text-input:focus { border-color:var(--primary); }
+.chat-send-btn {
+  width:42px; height:42px; border-radius:9999px; flex-shrink:0;
+  background:var(--primary); border:none; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:background .2s, transform .15s;
+}
+.chat-send-btn:hover { background:var(--accent); transform:scale(1.07); }
+.chat-send-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+.typing-dots span {
+  display:inline-block; width:7px; height:7px;
+  background:var(--primary); border-radius:50%; margin:0 2px;
+  animation:typingBounce 1.4s infinite ease-in-out;
+}
+.typing-dots span:nth-child(2) { animation-delay:.2s; }
+.typing-dots span:nth-child(3) { animation-delay:.4s; }
+@keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+
+.fc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:1rem; }
+.fc {
+  background:#fff; border:1.5px solid var(--border);
+  border-radius:14px; padding:1.25rem; cursor:pointer; min-height:110px;
+  display:flex; align-items:center; justify-content:center; text-align:center;
+  transition:all .25s; box-shadow:var(--shadow-sm);
+}
+.fc:hover { box-shadow:var(--shadow-md); transform:translateY(-3px); border-color:#DDD6FE; }
+.fc-q { font-weight:600; font-size:.875rem; color:var(--text); }
+.fc-a { font-size:.8125rem; color:var(--primary); font-weight:600; display:none; }
+.fc.flipped .fc-q { display:none; }
+.fc.flipped .fc-a { display:block; }
+.fc-hint { font-size:.75rem; color:var(--muted); margin-bottom:1rem; }
+
+.planner { display:flex; flex-direction:column; gap:.75rem; }
+.plan-row {
+  background:#fff; border:1px solid var(--border);
+  border-radius:12px; padding:.875rem 1.25rem;
+  display:flex; align-items:center; gap:1rem; box-shadow:var(--shadow-sm);
+}
+.plan-badge { padding:.25rem .75rem; border-radius:9999px; font-size:.75rem; font-weight:700; white-space:nowrap; }
+.b-now  { background:#FEE2E2; color:#DC2626; }
+.b-tmrw { background:#FEF9C3; color:#B45309; }
+.b-soon { background:#F5F3FF; color:var(--primary); }
+.plan-task { font-weight:500; font-size:.9375rem; color:var(--text); }
+.plan-date { font-size:.8125rem; color:var(--muted); margin-left:auto; white-space:nowrap; }
+
+.summary-block {
+  background:#fff; border:1px solid var(--border);
+  border-radius:14px; padding:1.5rem; box-shadow:var(--shadow-sm);
+}
+.summary-block h4 { font-family:'Nunito',sans-serif; font-weight:800; font-size:1rem; color:var(--text); margin-bottom:.875rem; }
+.summary-tag {
+  display:inline-block; background:#F5F3FF; color:var(--primary);
+  border-radius:9999px; padding:.2rem .75rem; font-size:.75rem; font-weight:600;
+  margin-right:.375rem; margin-bottom:.375rem;
+}
+.summary-points { list-style:none; display:flex; flex-direction:column; gap:.5rem; margin-top:1rem; }
+.summary-points li { display:flex; gap:.625rem; font-size:.9rem; color:var(--text); align-items:flex-start; }
+.summary-points li::before { content:'→'; color:var(--primary); font-weight:700; flex-shrink:0; margin-top:.05rem; }
+
+/* ════════════════════════════
+   TESTIMONIALS
+════════════════════════════ */
+#testimonials { background: var(--surface); }
+.testi-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:1.75rem; margin-top:3.5rem;
+}
+.testi-card {
+  background:#fff; border:1px solid var(--border);
+  border-radius:20px; padding:2rem;
+  box-shadow:var(--shadow-sm);
+  transition:box-shadow .25s, transform .25s;
+}
+.testi-card:hover { box-shadow:var(--shadow-md); transform:translateY(-3px); }
+.stars { color:#FBBF24; letter-spacing:2px; margin-bottom:1rem; }
+.testi-quote { font-size:.9375rem; line-height:1.72; color:var(--text); margin-bottom:1.5rem; font-style:italic; }
+.testi-author { display:flex; align-items:center; gap:.875rem; }
+.author-av {
+  width:44px; height:44px; border-radius:9999px;
+  background:linear-gradient(135deg,var(--accent),var(--primary));
+  color:#fff; font-family:'Nunito',sans-serif; font-weight:800; font-size:.9375rem;
+  display:flex; align-items:center; justify-content:center;
+}
+.author-name { font-family:'Nunito',sans-serif; font-weight:800; font-size:.9375rem; color:var(--text); }
+.author-role { font-size:.8125rem; color:var(--muted); }
+
+/* ════════════════════════════
+   PRICING
+════════════════════════════ */
+#pricing { background: #fff; }
+.pricing-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(275px,1fr));
+  gap:1.75rem; margin-top:3.5rem; align-items:start;
+}
+.price-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:24px; padding:2.25rem;
+  box-shadow:var(--shadow-sm); transition:box-shadow .25s;
+}
+.price-card:hover { box-shadow:var(--shadow-md); }
+.price-card.hot {
+  background:linear-gradient(145deg,#6D28D9 0%,#7C3AED 100%);
+  border-color:transparent; color:#fff; transform:scale(1.04);
+  box-shadow:var(--shadow-xl);
+}
+.price-card.hot:hover { transform:scale(1.06); }
+.price-badge { display:inline-block; background:rgba(255,255,255,.2); color:#fff; border-radius:9999px; padding:.25rem .875rem; font-size:.75rem; font-weight:700; margin-bottom:.875rem; }
+.price-plan { font-family:'Nunito',sans-serif; font-weight:800; font-size:1.125rem; margin-bottom:.625rem; }
+.price-amount { font-family:'Nunito',sans-serif; font-weight:900; font-size:2.875rem; line-height:1; }
+.price-amount span { font-size:1rem; font-weight:500; opacity:.7; }
+.price-desc { font-size:.875rem; opacity:.75; margin:.5rem 0 1.75rem; line-height:1.5; }
+.price-features { list-style:none; display:flex; flex-direction:column; gap:.625rem; margin-bottom:2rem; }
+.price-features li { font-size:.9rem; display:flex; align-items:flex-start; gap:.625rem; }
+.price-features li::before { content:'✓'; font-weight:700; color:#22C55E; flex-shrink:0; margin-top:.05rem; }
+.price-card.hot .price-features li { color:rgba(255,255,255,.92); }
+.price-card.hot .price-features li::before { color:#86EFAC; }
+.price-btn {
+  display:block; width:100%; text-align:center; padding:.875rem;
+  border-radius:9999px; font-weight:700; font-size:.9375rem;
+  text-decoration:none; cursor:pointer; border:none; transition:all .2s;
+}
+.price-btn-default { background:#F5F3FF; color:var(--primary); }
+.price-btn-default:hover { background:var(--primary); color:#fff; }
+.price-btn-hot { background:#fff; color:#7C3AED; }
+.price-btn-hot:hover { background:#F5F3FF; transform:scale(1.02); }
+
+/* ════════════════════════════
+   FAQ
+════════════════════════════ */
+#faq { background: var(--surface); }
+.faq-layout {
+  display:grid; grid-template-columns:1fr 1.2fr; gap:4rem; align-items:start;
+  margin-top:3.5rem;
+}
+.faq-item { border-bottom:1px solid var(--border); }
+.faq-btn {
+  width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  padding:1.125rem 0;
+  font-weight:600; font-size:.9375rem; color:var(--text);
+  display:flex; justify-content:space-between; align-items:center; gap:1rem;
+  transition:color .15s;
+}
+.faq-btn:hover { color:var(--primary); }
+.faq-chevron { transition:transform .25s; color:var(--muted); font-size:1.1rem; flex-shrink:0; }
+.faq-item.open .faq-chevron { transform:rotate(180deg); color:var(--primary); }
+.faq-answer {
+  font-size:.9375rem; color:var(--muted); line-height:1.7;
+  max-height:0; overflow:hidden; transition:max-height .3s ease, padding .3s ease;
+}
+.faq-item.open .faq-answer { max-height:200px; padding-bottom:1.25rem; }
+.faq-cta-box {
+  background:#fff; border:1px solid var(--border);
+  border-radius:18px; padding:1.75rem; margin-top:1.5rem;
+  display:flex; align-items:center; gap:1rem;
+}
+.faq-robo { font-size:2.5rem; flex-shrink:0; animation:robotFloat 3.5s ease-in-out infinite; }
+@keyframes robotFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+/* ════════════════════════════
+   CTA BAND
+════════════════════════════ */
+#cta-band {
+  background:linear-gradient(135deg,#3B0764 0%,#6D28D9 50%,#7C3AED 100%);
+  padding:5rem 0; text-align:center; position:relative; overflow:hidden;
+}
+#cta-band::before {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(167,139,250,.25) 0%,transparent 65%);
+}
+.cta-heading { font-family:'Nunito',sans-serif; font-weight:900; font-size:clamp(2rem,4vw,3rem); color:#fff; margin-bottom:1rem; position:relative; }
+.cta-sub { font-size:1.125rem; color:rgba(255,255,255,.8); margin-bottom:2.5rem; position:relative; }
+.cta-btns { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; position:relative; }
+.btn-white { background:#fff; color:#7C3AED; padding:.9375rem 2.25rem; border-radius:9999px; font-weight:700; font-size:1rem; text-decoration:none; transition:all .2s; box-shadow:0 4px 20px rgba(0,0,0,.15); }
+.btn-white:hover { transform:scale(1.04); box-shadow:0 8px 30px rgba(0,0,0,.2); }
+.btn-ghost-w { background:transparent; color:#fff; padding:.9375rem 2.25rem; border-radius:9999px; border:2px solid rgba(255,255,255,.45); font-weight:700; font-size:1rem; text-decoration:none; transition:all .2s; }
+.btn-ghost-w:hover { border-color:#fff; background:rgba(255,255,255,.1); }
+
+/* ════════════════════════════
+   FOOTER
+════════════════════════════ */
+footer { background:#06060f; color:#94A3B8; padding:4rem 0 2rem; }
+.footer-grid {
+  display:grid; grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:3rem; margin-bottom:3rem;
+}
+.footer-logo { font-family:'Fredoka One',cursive; font-size:1.375rem; color:#fff; margin-bottom:.75rem; display:flex; align-items:center; gap:.5rem; }
+.footer-desc { font-size:.875rem; line-height:1.65; color:#475569; max-width:280px; }
+.footer-social { display:flex; gap:.75rem; margin-top:1.25rem; }
+.s-link {
+  width:36px; height:36px; border-radius:9999px;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+  display:flex; align-items:center; justify-content:center;
+  color:#94A3B8; text-decoration:none; font-size:.875rem; transition:all .2s;
+}
+.s-link:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
+.footer-col h4 { font-family:'Nunito',sans-serif; font-weight:700; color:#fff; font-size:.9375rem; margin-bottom:1rem; }
+.footer-col ul { list-style:none; display:flex; flex-direction:column; gap:.5rem; }
+.footer-col ul li a { color:#475569; text-decoration:none; font-size:.875rem; transition:color .15s; }
+.footer-col ul li a:hover { color:#DDD6FE; }
+.footer-bottom { border-top:1px solid rgba(255,255,255,.07); padding-top:1.75rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; }
+.footer-bottom p { font-size:.85rem; color:#334155; }
+
+/* ════════════════════════════
+   RESPONSIVE
+════════════════════════════ */
+@media (max-width:1024px) {
+  .tools-layout { grid-template-columns:1fr; }
+  .tool-sidebar { flex-direction:row; flex-wrap:wrap; }
+  .faq-layout { grid-template-columns:1fr; gap:2rem; }
+}
+@media (max-width:900px) {
+  .hero-inner { grid-template-columns:1fr; text-align:center; }
+  .hero-btns { justify-content:center; }
+  .hero-stats { justify-content:center; }
+  .hero-sub { margin-left:auto; margin-right:auto; }
+  .hero-badge { margin-left:auto; margin-right:auto; }
+  .hero-scene-wrap { height:340px; order:-1; }
+  .footer-grid { grid-template-columns:1fr 1fr; gap:2rem; }
+  .steps-grid::before { display:none; }
+}
+@media (max-width:640px) {
+  .nav-links { display:none; }
+  .hamburger { display:flex; }
+  section { padding:3.5rem 0; }
+  .hero-inner { padding:3rem 1.5rem; }
+  .price-card.hot { transform:scale(1); }
+  .footer-grid { grid-template-columns:1fr; }
+}
+  </style>
+</head>
+
+<body>
+
+<!-- ══════════════ NAVBAR ══════════════ -->
+<nav id="navbar" class="hero-zone">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <span class="logo-icon">🤖</span>
+      RoboBuddy
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#study-tools">Tools</a>
+      <a href="#testimonials">Reviews</a>
+      <a href="#pricing">Pricing</a>
+    </div>
+    <a href="#pricing" class="nav-cta">Get Started Free</a>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#features"     onclick="closeMobile()">Features</a>
+  <a href="#study-tools"  onclick="closeMobile()">Tools</a>
+  <a href="#testimonials" onclick="closeMobile()">Reviews</a>
+  <a href="#pricing"      onclick="closeMobile()">Pricing</a>
+  <a href="#pricing" class="nav-cta" style="text-align:center;margin-top:.5rem;" onclick="closeMobile()">Get Started Free →</a>
+</div>
+
+<!-- ══════════════ HERO ══════════════ -->
+<section id="hero">
+  <div class="hero-bg-grad"></div>
+  <div class="hero-grid"></div>
+  <div id="hero-spotlight"></div>
+
+  <div class="hero-inner">
+    <!-- Left -->
+    <div>
+      <div class="hero-badge"><span class="badge-dot"></span>AI-Powered Study Assistant</div>
+      <h1 class="hero-heading">
+        Meet <span class="gradient-word">RoboBuddy
+          <span class="blob blob-1"></span>
+          <span class="blob blob-2"></span>
+          <span class="blob blob-3"></span>
+          <span class="blob blob-4"></span>
+        </span>
+      </h1>
+      <p class="hero-sub">Your intelligent companion for smarter studying. Upload notes, generate flashcards, and get instant AI answers — all in one place.</p>
+      <div class="hero-btns">
+        <a href="#pricing" class="btn-get-started">
+          <span class="label">Get Started Free</span>
+          <span class="chevron-box">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+          </span>
+        </a>
+        <a href="#study-tools" class="btn-watch">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          Watch Demo
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div><div class="stat-num">50K+</div><div class="stat-label">Active Students</div></div>
+        <div class="divider"></div>
+        <div><div class="stat-num">4.9/5</div><div class="stat-label">User Rating</div></div>
+        <div class="divider"></div>
+        <div><div class="stat-num">24/7</div><div class="stat-label">AI Support</div></div>
+      </div>
+    </div>
+
+    <!-- Right: Spline scene -->
+    <div class="hero-scene-wrap">
+      <div class="hero-scene-bg"></div>
+      <div class="hero-scene-card" id="sceneCard">
+        <div class="scene-loader" id="sceneLoader"><div class="loader-ring"></div></div>
+        <script type="module">
+          import { Application } from 'https://unpkg.com/@splinetool/runtime@1.9.28/build/runtime.js';
+          const canvas = document.createElement('canvas');
+          canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+          const card = document.getElementById('sceneCard');
+          card.appendChild(canvas);
+          const app = new Application(canvas);
+          app.load('https://prod.spline.design/PyzDhpQ9E5f1E3MT/scene.splinecode')
+            .then(() => { document.getElementById('sceneLoader').style.display = 'none'; })
+            .catch(() => {
+              const l = document.getElementById('sceneLoader');
+              l.innerHTML = `<div style="text-align:center;">
+                <div style="font-size:6rem;animation:robotFloat 3.5s ease-in-out infinite;display:inline-block;">🤖</div>
+                <p style="color:#475569;font-size:.875rem;margin-top:.75rem;font-family:Inter,sans-serif;">RoboBuddy is ready!</p>
+              </div>`;
+              l.style.background = 'rgba(124,58,237,.05)';
+            });
+        </script>
+      </div>
+      <div class="glow-purple"></div>
+      <div class="glow-blue"></div>
+    </div>
+  </div>
+  <div class="hero-line"></div>
+</section>
+
+<!-- ══════════════ TRUST ══════════════ -->
+<div id="trust">
+  <div class="container">
+    <p class="trust-label">Trusted by students at leading universities</p>
+    <div class="trust-logos">
+      <span>MIT</span><span>Stanford</span><span>UCLA</span>
+      <span>Oxford</span><span>Johns Hopkins</span><span>NYU</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ FEATURES ══════════════ -->
+<section id="features">
+  <div class="container">
+    <div class="center-head reveal">
+      <div class="section-tag">✨ Core Features</div>
+      <h2 class="section-heading">Everything You Need to Ace Your Studies</h2>
+      <p class="section-sub">Four powerful AI tools that work together to transform how you learn.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal d1">
+        <div class="feature-icon">📂</div>
+        <h3>Upload &amp; Summarize</h3>
+        <p>Drop in PDFs, slides, or text. RoboBuddy reads everything and generates clean, structured summaries in seconds — highlighting key concepts you actually need.</p>
+      </div>
+      <div class="feature-card reveal d2">
+        <div class="feature-icon">🃏</div>
+        <h3>Smart Flashcards &amp; Quizzes</h3>
+        <p>Automatically generate flashcard decks and multiple-choice quizzes from your content. Built-in spaced repetition schedules reviews for peak exam-day retention.</p>
+      </div>
+      <div class="feature-card reveal d3">
+        <div class="feature-icon">📅</div>
+        <h3>AI Study Planner</h3>
+        <p>Enter your exam dates and get a personalized daily study schedule. Deadline reminders, progress tracking, and priority scoring keep nothing slipping through the cracks.</p>
+      </div>
+      <div class="feature-card reveal d4">
+        <div class="feature-icon">💬</div>
+        <h3>Chat with Your Notes</h3>
+        <p>Ask anything about your uploaded content and get precise, cited answers powered by RAG. It's grounded in your actual notes — not generic internet knowledge.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ HOW IT WORKS ══════════════ -->
+<section id="how-it-works">
+  <div class="container">
+    <div class="center-head reveal">
+      <div class="section-tag">⚡ Simple Process</div>
+      <h2 class="section-heading">From Notes to Mastery in 4 Steps</h2>
+      <p class="section-sub">RoboBuddy turns raw study materials into a complete learning system — automatically.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal d1">
+        <div class="step-num-wrap">1</div>
+        <h3>Upload Your Notes</h3>
+        <p>Drop in PDFs, Word docs, or paste text. RoboBuddy reads and understands your content instantly.</p>
+      </div>
+      <div class="step-card reveal d2">
+        <div class="step-num-wrap">2</div>
+        <h3>AI Summarizes</h3>
+        <p>Get crisp summaries with key definitions, formulas, and takeaways — no more hunting through 60-page PDFs.</p>
+      </div>
+      <div class="step-card reveal d3">
+        <div class="step-num-wrap">3</div>
+        <h3>Generate &amp; Practice</h3>
+        <p>Flashcards and quizzes are created automatically. Study with spaced repetition until exam day.</p>
+      </div>
+      <div class="step-card reveal d4">
+        <div class="step-num-wrap">4</div>
+        <h3>Chat &amp; Master</h3>
+        <p>Ask questions, get explanations, plan your schedule. RoboBuddy guides you until you're truly ready.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ STUDY TOOLS ══════════════ -->
+<section id="study-tools">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-tag">🎮 Study Tools</div>
+      <h2 class="section-heading">Your AI Study Toolkit</h2>
+      <p class="section-sub">Upload your notes once — chat, generate flashcards, summarize, and plan your schedule with live AI.</p>
+    </div>
+
+    <!-- ── Shared file upload zone ── -->
+    <div class="upload-zone reveal" id="upload-zone"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleFileDrop(event)">
+      <input type="file" id="file-input" accept=".pdf,.docx,.txt,.md" hidden onchange="handleFileSelect(event)" />
+      <div id="upload-idle" class="upload-idle" onclick="document.getElementById('file-input').click()">
+        <span class="upload-icon">📂</span>
+        <div>
+          <span class="upload-main">Drop your notes here or <span class="upload-link">browse</span></span>
+          <span class="upload-formats">PDF · DOCX · TXT · MD — used by all tools below</span>
+        </div>
+      </div>
+      <div id="upload-loading" class="upload-loading" style="display:none">
+        <div class="loader-ring" style="width:22px;height:22px;border-width:2px;"></div>
+        <span>Reading file…</span>
+      </div>
+      <div id="upload-done" class="upload-done" style="display:none">
+        <span style="font-size:1.375rem;">📄</span>
+        <div>
+          <span class="upload-filename" id="upload-filename"></span>
+          <span class="upload-chars" id="upload-chars"></span>
+        </div>
+        <button class="upload-clear-btn" onclick="clearUpload()">✕ Remove</button>
+      </div>
+    </div>
+
+    <div class="tools-layout reveal">
+      <!-- Sidebar tabs -->
+      <div class="tool-sidebar">
+        <button class="tool-tab active" onclick="switchTool('chat')">
+          <div class="tool-tab-icon"><span class="material-symbols-outlined" style="color:var(--primary);">smart_toy</span></div>
+          <div><div class="tool-tab-label">Chat with Notes</div><div class="tool-tab-sub">RAG-style Q&amp;A</div></div>
+        </button>
+        <button class="tool-tab" onclick="switchTool('flashcards')">
+          <div class="tool-tab-icon"><span class="material-symbols-outlined" style="color:var(--primary);">quiz</span></div>
+          <div><div class="tool-tab-label">Flashcards</div><div class="tool-tab-sub">Click to flip</div></div>
+        </button>
+        <button class="tool-tab" onclick="switchTool('planner')">
+          <div class="tool-tab-icon"><span class="material-symbols-outlined" style="color:var(--primary);">event_note</span></div>
+          <div><div class="tool-tab-label">Study Planner</div><div class="tool-tab-sub">Deadline-aware</div></div>
+        </button>
+        <button class="tool-tab" onclick="switchTool('summary')">
+          <div class="tool-tab-icon"><span class="material-symbols-outlined" style="color:var(--primary);">summarize</span></div>
+          <div><div class="tool-tab-label">AI Summary</div><div class="tool-tab-sub">Instant notes</div></div>
+        </button>
+      </div>
+
+      <!-- Panels -->
+      <div class="tool-panel-wrap">
+        <!-- Chat (live) -->
+        <div class="tool-panel active" id="tp-chat">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem;">
+            <div class="panel-title" style="margin-bottom:0;">💬 Chat with RoboBuddy</div>
+            <span class="api-key-reset-link" id="change-key-link" style="display:none;" onclick="resetApiKey()">Change API key</span>
+          </div>
+          <div class="panel-sub">Your live AI study assistant — ask anything about any subject.</div>
+
+          <!-- API key setup -->
+          <div id="api-key-banner" class="api-key-banner">
+            <div class="api-key-label">🔑 Connect your Anthropic API key to start chatting</div>
+            <div class="api-key-hint">Your key is saved in your browser only and sent directly to Anthropic — never stored on any server. Get one free at <strong>console.anthropic.com</strong>.</div>
+            <div class="api-key-input-row">
+              <input type="password" id="api-key-input" class="api-key-field" placeholder="sk-ant-..." onkeydown="if(event.key==='Enter')saveApiKey()" />
+              <button class="api-key-connect-btn" onclick="saveApiKey()">Connect</button>
+            </div>
+          </div>
+
+          <!-- Live chat log -->
+          <div class="chat-log" id="live-chat-log"></div>
+
+          <!-- Input row -->
+          <div class="chat-input-area" id="chat-input-area">
+            <input type="text" id="user-message-input" class="chat-text-input" placeholder="Ask me anything…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}" />
+            <button class="chat-send-btn" id="send-btn" onclick="sendMessage()">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Flashcards (live) -->
+        <div class="tool-panel" id="tp-flashcards">
+          <div class="panel-title">🃏 AI Flashcard Generator</div>
+          <div class="panel-sub">Upload notes above or type any topic to generate a real deck.</div>
+          <input type="text" class="tool-text-input" id="fc-topic" placeholder="Topic — e.g. Photosynthesis, French Revolution, Python loops (used if no file uploaded)" />
+          <div style="display:flex;align-items:center;gap:.875rem;flex-wrap:wrap;">
+            <button class="gen-btn" id="fc-btn" onclick="generateFlashcards()">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Generate Flashcards
+            </button>
+            <span id="fc-hint" style="font-size:.8rem;color:var(--muted);"></span>
+          </div>
+          <div id="fc-output" style="margin-top:1.5rem;"></div>
+        </div>
+
+        <!-- Planner (live) -->
+        <div class="tool-panel" id="tp-planner">
+          <div class="panel-title">📅 AI Study Planner</div>
+          <div class="panel-sub">Enter your exam details — get a personalized day-by-day schedule.</div>
+          <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem;">
+            <input type="text" class="tool-text-input" id="pl-subject" placeholder="Subject — e.g. Biology Midterm, Calculus Final" style="margin-bottom:0;" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+              <div>
+                <label style="font-size:.8rem;font-weight:600;color:var(--muted);display:block;margin-bottom:.35rem;">Exam Date</label>
+                <input type="date" class="tool-text-input" id="pl-date" style="margin-bottom:0;" />
+              </div>
+              <div>
+                <label style="font-size:.8rem;font-weight:600;color:var(--muted);display:block;margin-bottom:.35rem;">Hours / day</label>
+                <input type="number" class="tool-text-input" id="pl-hours" placeholder="2" min="0.5" max="12" step="0.5" style="margin-bottom:0;" />
+              </div>
+            </div>
+            <button class="gen-btn" id="pl-btn" onclick="generatePlan()" style="align-self:flex-start;">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>
+              Build My Plan
+            </button>
+          </div>
+          <div id="pl-output"></div>
+        </div>
+
+        <!-- Summary (live) -->
+        <div class="tool-panel" id="tp-summary">
+          <div class="panel-title">📋 AI Summarizer</div>
+          <div class="panel-sub">Upload notes above, or paste any text here for an instant AI summary.</div>
+          <textarea class="tool-text-input" id="sum-paste" rows="4" placeholder="Paste notes here… (or upload a file above — whichever you provide will be used)"></textarea>
+          <button class="gen-btn" id="sum-btn" onclick="generateSummary()" style="margin-bottom:1.25rem;">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 0 2-2h2a2 2 0 0 0 2 2"/></svg>
+            Summarize
+          </button>
+          <div id="sum-output"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ TESTIMONIALS ══════════════ -->
+<section id="testimonials">
+  <div class="container">
+    <div class="center-head reveal">
+      <div class="section-tag">💬 Student Reviews</div>
+      <h2 class="section-heading">Loved by Students Everywhere</h2>
+      <p class="section-sub">Real stories from real students who turned their grades around with RoboBuddy.</p>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card reveal d1">
+        <div class="stars">★★★★★</div>
+        <p class="testi-quote">"Raised my GPA from 2.8 to 3.7 in one semester! The AI summaries save me hours and the flashcard feature is genuinely addictive."</p>
+        <div class="testi-author">
+          <div class="author-av">MC</div>
+          <div><div class="author-name">Maya Chen</div><div class="author-role">Biology Major, UCLA</div></div>
+        </div>
+      </div>
+      <div class="testi-card reveal d2">
+        <div class="stars">★★★★★</div>
+        <p class="testi-quote">"The flashcard generator saved me 4 hours a week. I upload lecture slides and have a full study deck before I leave the classroom."</p>
+        <div class="testi-author">
+          <div class="author-av">JL</div>
+          <div><div class="author-name">Jordan Lee</div><div class="author-role">Pre-Med, Johns Hopkins</div></div>
+        </div>
+      </div>
+      <div class="testi-card reveal d3">
+        <div class="stars">★★★★★</div>
+        <p class="testi-quote">"Chatting with my notes feels like having a tutor available 24/7. It explained a tricky algorithm from my CS lecture better than my professor did."</p>
+        <div class="testi-author">
+          <div class="author-av">PS</div>
+          <div><div class="author-name">Priya Sharma</div><div class="author-role">Computer Science, MIT</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ PRICING ══════════════ -->
+<section id="pricing">
+  <div class="container">
+    <div class="center-head reveal">
+      <div class="section-tag">💰 Pricing</div>
+      <h2 class="section-heading">Start Free, Upgrade When Ready</h2>
+      <p class="section-sub">No credit card needed. Cancel anytime.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card reveal d1">
+        <div class="price-plan">Free</div>
+        <div class="price-amount">$0 <span>/ month</span></div>
+        <div class="price-desc">Perfect for trying RoboBuddy out</div>
+        <ul class="price-features">
+          <li>10 note uploads per month</li>
+          <li>AI summaries (up to 5 pages)</li>
+          <li>50 AI-generated flashcards</li>
+          <li>Basic study planner</li>
+          <li>5 chat messages per day</li>
+        </ul>
+        <a href="#" class="price-btn price-btn-default">Get Started Free</a>
+      </div>
+      <div class="price-card hot reveal d2">
+        <div class="price-badge">⭐ Most Popular</div>
+        <div class="price-plan" style="color:#fff;">Pro</div>
+        <div class="price-amount" style="color:#fff;">$12 <span>/ month</span></div>
+        <div class="price-desc">For serious students who want it all</div>
+        <ul class="price-features">
+          <li>Unlimited note uploads</li>
+          <li>Full AI summaries (any length)</li>
+          <li>Unlimited flashcards &amp; quizzes</li>
+          <li>Smart study planner + deadlines</li>
+          <li>Unlimited AI chat with notes</li>
+          <li>Spaced repetition engine</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="#" class="price-btn price-btn-hot">Start Pro Free →</a>
+      </div>
+      <div class="price-card reveal d3">
+        <div class="price-plan">Team</div>
+        <div class="price-amount">$29 <span>/ month</span></div>
+        <div class="price-desc">For study groups, tutors &amp; institutions</div>
+        <ul class="price-features">
+          <li>Everything in Pro</li>
+          <li>5 seats included</li>
+          <li>Shared note libraries</li>
+          <li>Admin dashboard</li>
+          <li>LMS integrations (Canvas, Blackboard)</li>
+          <li>Dedicated onboarding &amp; SLA</li>
+        </ul>
+        <a href="#" class="price-btn price-btn-default">Start Team Trial</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ FAQ ══════════════ -->
+<section id="faq">
+  <div class="container">
+    <div class="faq-layout">
+      <div class="reveal">
+        <div class="section-tag">❓ FAQ</div>
+        <h2 class="section-heading">Frequently Asked Questions</h2>
+        <p class="section-sub">Can't find an answer? <a href="#" style="color:var(--primary);font-weight:600;">Chat with our support bot</a> — available 24/7.</p>
+        <div class="faq-cta-box">
+          <div class="faq-robo">🤖</div>
+          <div>
+            <p style="font-family:'Nunito',sans-serif;font-weight:800;font-size:1rem;color:var(--text);margin-bottom:.25rem;">Still have questions?</p>
+            <p style="font-size:.875rem;color:var(--muted);">Our AI support bot knows everything about RoboBuddy and responds instantly.</p>
+          </div>
+        </div>
+      </div>
+      <div class="reveal d1">
+        <div class="faq-item">
+          <button class="faq-btn" onclick="toggleFaq(this)">Can I switch plans anytime?<span class="faq-chevron">▾</span></button>
+          <div class="faq-answer">Yes! Upgrade or downgrade at any time. Changes take effect at the start of your next billing cycle — no cancellation fees ever.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-btn" onclick="toggleFaq(this)">What file types can I upload?<span class="faq-chevron">▾</span></button>
+          <div class="faq-answer">RoboBuddy supports PDF, DOCX, PPTX, TXT, and Markdown files. Images with text (PNG, JPG) are supported via OCR on the Pro plan.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-btn" onclick="toggleFaq(this)">How accurate is the AI chat?<span class="faq-chevron">▾</span></button>
+          <div class="faq-answer">Very accurate — our RAG system grounds every answer in your actual uploaded notes, not generic internet data. Responses include source citations so you can verify.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-btn" onclick="toggleFaq(this)">Is there a student discount?<span class="faq-chevron">▾</span></button>
+          <div class="faq-answer">Our Pro plan is already priced for students. Email us with a valid .edu address for additional group or institutional rates.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-btn" onclick="toggleFaq(this)">What happens to my data if I cancel?<span class="faq-chevron">▾</span></button>
+          <div class="faq-answer">We store your notes and flashcards for 12 months after cancellation. Export everything from your account settings at any time.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-btn" onclick="toggleFaq(this)">Does RoboBuddy work on mobile?<span class="faq-chevron">▾</span></button>
+          <div class="faq-answer">Yes — RoboBuddy is fully responsive and works great on phones and tablets. Native iOS and Android apps are coming in Q3 2026.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ CTA BAND ══════════════ -->
+<section id="cta-band">
+  <div class="container reveal">
+    <h2 class="cta-heading">Ready to Study Like Never Before?</h2>
+    <p class="cta-sub">Join 50,000+ students already using RoboBuddy to get better grades with less stress.</p>
+    <div class="cta-btns">
+      <a href="#pricing" class="btn-white">Start for Free — No Credit Card</a>
+      <a href="#study-tools" class="btn-ghost-w">Explore the Tools</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo">🤖 RoboBuddy</div>
+        <p class="footer-desc">The AI-powered study assistant that turns your notes into flashcards, summaries, and a smart tutor — all in one place.</p>
+        <div class="footer-social">
+          <a href="#" class="s-link" aria-label="X / Twitter">𝕏</a>
+          <a href="#" class="s-link" aria-label="Instagram">📷</a>
+          <a href="#" class="s-link" aria-label="LinkedIn">in</a>
+          <a href="#" class="s-link" aria-label="Discord">💬</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#">Features</a></li>
+          <li><a href="#">Pricing</a></li>
+          <li><a href="#">Changelog</a></li>
+          <li><a href="#">Roadmap</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Press</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Service</a></li>
+          <li><a href="#">Contact Us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 RoboBuddy. All rights reserved.</p>
+      <p>Made with ❤️ for students everywhere</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ══════════════ JAVASCRIPT ══════════════ -->
+<script>
+// ── Navbar: scroll + hero-zone detection ──
+const navbar = document.getElementById('navbar');
+const heroEl = document.getElementById('hero');
+function updateNav() {
+  const inHero = window.scrollY < heroEl.offsetHeight - 80;
+  navbar.classList.toggle('scrolled', window.scrollY > 20);
+  navbar.classList.toggle('hero-zone', inHero && window.scrollY < 20);
+}
+window.addEventListener('scroll', updateNav, { passive: true });
+updateNav();
+
+// ── Mobile menu ──
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('mobileMenu').classList.toggle('open');
+});
+function closeMobile() { document.getElementById('mobileMenu').classList.remove('open'); }
+
+// ── Hero mouse spotlight ──
+const spotlightEl = document.getElementById('hero-spotlight');
+heroEl.addEventListener('mousemove', (e) => {
+  const r = heroEl.getBoundingClientRect();
+  spotlightEl.style.background = `radial-gradient(600px circle at ${e.clientX - r.left}px ${e.clientY - r.top}px, rgba(124,58,237,0.18), transparent 40%)`;
+  spotlightEl.style.opacity = '1';
+}, { passive: true });
+heroEl.addEventListener('mouseleave', () => { spotlightEl.style.opacity = '0'; });
+
+// ── Scroll reveal ──
+const revealEls = document.querySelectorAll('.reveal');
+const ro = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); ro.unobserve(e.target); } });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+revealEls.forEach(el => ro.observe(el));
+
+// ── Study Tools tab switching ──
+function switchTool(name) {
+  document.querySelectorAll('.tool-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tool-tab[onclick="switchTool('${name}')"]`).classList.add('active');
+  document.getElementById('tp-' + name).classList.add('active');
+}
+
+// ── FAQ accordion ──
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const open = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if (!open) item.classList.add('open');
+}
+
+// ── Smooth anchor scroll with fixed nav offset ──
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', (e) => {
+    const t = document.querySelector(a.getAttribute('href'));
+    if (t) { e.preventDefault(); window.scrollTo({ top: t.getBoundingClientRect().top + scrollY - 80, behavior: 'smooth' }); }
+  });
+});
+
+// ══════════════════════════════════════════
+//  RoboBuddy — Live AI Chat
+// ══════════════════════════════════════════
+(function () {
+  const MODEL   = 'claude-haiku-4-5-20251001';
+  const API_URL = 'https://api.anthropic.com/v1/messages';
+  const SYSTEM  = `You are RoboBuddy, a friendly and encouraging AI study assistant.
+Help students understand any subject — science, math, history, literature, coding, and more.
+Keep answers clear and concise. Use **bold** for key terms. When asked to quiz, give one question at a time.
+Be warm and supportive, but not over the top.`;
+
+  let history   = [];
+  let loading   = false;
+  let apiKey    = localStorage.getItem('robobuddy_key') || '';
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function fmt(text) {
+    return escHtml(text)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`\n]+)`/g, '<code style="background:#F1F5F9;padding:.1em .35em;border-radius:4px;font-size:.875em;font-family:monospace;">$1</code>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function updateUI() {
+    const banner   = document.getElementById('api-key-banner');
+    const inputRow = document.getElementById('chat-input-area');
+    const changeLink = document.getElementById('change-key-link');
+    if (!banner) return;
+    const hasKey = !!apiKey;
+    banner.style.display    = hasKey ? 'none'  : 'block';
+    inputRow.style.display  = hasKey ? 'flex'  : 'none';
+    if (changeLink) changeLink.style.display = hasKey ? 'inline' : 'none';
+  }
+
+  function appendMsg(role, html) {
+    const log = document.getElementById('live-chat-log');
+    if (!log) return null;
+    const row = document.createElement('div');
+    row.className = 'chat-row' + (role === 'user' ? ' user' : '');
+    row.innerHTML = role === 'user'
+      ? `<div class="chat-av me">You</div><div class="bubble user">${html}</div>`
+      : `<div class="chat-av bot">🤖</div><div class="bubble bot">${html}</div>`;
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+    return row;
+  }
+
+  function welcome() {
+    const log = document.getElementById('live-chat-log');
+    if (log && log.children.length === 0) {
+      appendMsg('bot', "Hey! I'm RoboBuddy 🤖 Your AI study buddy is live. Ask me to explain a concept, quiz you on a topic, help you understand something tricky, or plan your study session!");
+    }
+  }
+
+  window.saveApiKey = function () {
+    const inp = document.getElementById('api-key-input');
+    const val = inp ? inp.value.trim() : '';
+    if (!val) return;
+    apiKey = val;
+    localStorage.setItem('robobuddy_key', apiKey);
+    updateUI();
+    welcome();
+    const msgInput = document.getElementById('user-message-input');
+    if (msgInput) msgInput.focus();
+  };
+
+  window.resetApiKey = function () {
+    localStorage.removeItem('robobuddy_key');
+    apiKey = '';
+    history = [];
+    const log = document.getElementById('live-chat-log');
+    if (log) log.innerHTML = '';
+    updateUI();
+  };
+
+  window.sendMessage = async function () {
+    if (loading || !apiKey) return;
+    const inp    = document.getElementById('user-message-input');
+    const btn    = document.getElementById('send-btn');
+    const text   = inp ? inp.value.trim() : '';
+    if (!text) return;
+
+    inp.value = '';
+    loading = true;
+    if (btn) btn.disabled = true;
+
+    appendMsg('user', escHtml(text));
+    history.push({ role: 'user', content: text });
+
+    const typingRow = appendMsg('bot', '<div class="typing-dots"><span></span><span></span><span></span></div>');
+    const log = document.getElementById('live-chat-log');
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: MODEL, max_tokens: 1024, stream: true, system: SYSTEM + (window.notesText ? '\n\n--- STUDENT\'S UPLOADED NOTES (use as primary reference for answers) ---\n' + window.notesText.slice(0, 8000) + '\n---' : ''), messages: history })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${res.status}`);
+      }
+
+      const bubble = typingRow ? typingRow.querySelector('.bubble') : null;
+      if (bubble) bubble.innerHTML = '';
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let full = '';
+      let buf  = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const p = JSON.parse(data);
+            if (p.type === 'content_block_delta' && p.delta?.type === 'text_delta') {
+              full += p.delta.text;
+              if (bubble) { bubble.innerHTML = fmt(full); log.scrollTop = log.scrollHeight; }
+            }
+          } catch (_) {}
+        }
+      }
+      history.push({ role: 'assistant', content: full });
+
+    } catch (err) {
+      const bubble = typingRow ? typingRow.querySelector('.bubble') : null;
+      if (bubble) bubble.innerHTML = `<span style="color:#DC2626;">⚠️ ${escHtml(err.message || 'Connection error — check your API key.')}</span>`;
+    } finally {
+      loading = false;
+      if (btn) btn.disabled = false;
+      if (inp) inp.focus();
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    updateUI();
+    if (apiKey) welcome();
+  });
+})();
+
+// ══════════════════════════════════════════
+//  RoboBuddy — File upload + Tools
+// ══════════════════════════════════════════
+(function () {
+
+  window.notesText     = '';
+  window.notesFileName = '';
+
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  function setUploadState(s) {
+    document.getElementById('upload-idle').style.display    = s === 'idle'    ? 'flex' : 'none';
+    document.getElementById('upload-loading').style.display = s === 'loading' ? 'flex' : 'none';
+    document.getElementById('upload-done').style.display    = s === 'done'    ? 'flex' : 'none';
+  }
+
+  window.handleFileSelect = function (e) {
+    const f = e.target.files[0];
+    if (f) processFile(f);
+    e.target.value = '';
+  };
+
+  window.handleFileDrop = function (e) {
+    e.preventDefault();
+    document.getElementById('upload-zone').classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) processFile(f);
+  };
+
+  window.clearUpload = function () {
+    window.notesText = window.notesFileName = '';
+    setUploadState('idle');
+    updateHint();
+  };
+
+  async function processFile(file) {
+    setUploadState('loading');
+    try {
+      const text = await extractText(file);
+      window.notesText     = text;
+      window.notesFileName = file.name;
+      document.getElementById('upload-filename').textContent = file.name;
+      document.getElementById('upload-chars').textContent    =
+        text.length.toLocaleString() + ' characters extracted';
+      setUploadState('done');
+      updateHint();
+    } catch (err) {
+      setUploadState('idle');
+      alert('Could not read file: ' + (err.message || err));
+    }
+  }
+
+  function updateHint() {
+    const el = document.getElementById('fc-hint');
+    if (el) el.textContent = window.notesText
+      ? '✓ Using: ' + window.notesFileName
+      : 'No file — topic input will be used';
+  }
+
+  async function extractText(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'pdf')  return extractPdf(file);
+    if (ext === 'docx') return extractDocx(file);
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result);
+      r.onerror = rej;
+      r.readAsText(file);
+    });
+  }
+
+  async function extractPdf(file) {
+    if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js not loaded');
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    let out = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const c = await page.getTextContent();
+      out += c.items.map(x => x.str).join(' ') + '\n';
+    }
+    return out.trim();
+  }
+
+  async function extractDocx(file) {
+    if (typeof mammoth === 'undefined') throw new Error('mammoth.js not loaded');
+    const r = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    return r.value.trim();
+  }
+
+  async function stream({ system, messages, maxTokens = 2048, onChunk, onDone, onError }) {
+    const key = localStorage.getItem('robobuddy_key') || '';
+    if (!key) { onError('No API key — connect it in the Chat tab first.'); return; }
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: maxTokens, stream: true, system, messages
+        })
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error?.message || 'HTTP ' + res.status);
+      }
+      const reader = res.body.getReader(), dec = new TextDecoder();
+      let full = '', buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n'); buf = lines.pop();
+        for (const ln of lines) {
+          if (!ln.startsWith('data: ')) continue;
+          const d = ln.slice(6).trim();
+          if (d === '[DONE]') continue;
+          try {
+            const p = JSON.parse(d);
+            if (p.type === 'content_block_delta' && p.delta?.type === 'text_delta') {
+              full += p.delta.text;
+              if (onChunk) onChunk(full);
+            }
+          } catch (_) {}
+        }
+      }
+      if (onDone) onDone(full);
+    } catch (err) { if (onError) onError(err.message || 'Connection error'); }
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Flashcard generator ──
+  window.generateFlashcards = async function () {
+    const btn    = document.getElementById('fc-btn');
+    const output = document.getElementById('fc-output');
+    const topic  = (document.getElementById('fc-topic').value || '').trim();
+    if (!window.notesText && !topic) {
+      output.innerHTML = '<p style="color:#DC2626;font-size:.875rem;">Upload a file or enter a topic first.</p>';
+      return;
+    }
+    btn.disabled = true;
+    output.innerHTML = '<div class="panel-loading"><div class="loader-ring" style="width:22px;height:22px;border-width:2px;"></div> Generating flashcards…</div>';
+
+    const source = window.notesText
+      ? 'Based on these notes:\n\n' + window.notesText.slice(0, 8000)
+      : 'Based on the topic: ' + topic;
+
+    await stream({
+      system: 'You are a flashcard generator. Respond ONLY with a valid JSON array — no markdown, no prose. Format: [{"q":"...","a":"..."}]',
+      messages: [{ role: 'user', content: 'Generate exactly 8 flashcard Q&A pairs. ' + source + '. Make questions specific, answers 1-2 sentences. Return only the JSON array.' }],
+      onDone: (t) => {
+        btn.disabled = false;
+        try {
+          const m = t.match(/\[[\s\S]*\]/);
+          renderCards(JSON.parse(m ? m[0] : t), output);
+        } catch (_) {
+          output.innerHTML = '<p style="color:#DC2626;font-size:.875rem;">Couldn\'t parse response — try again.</p>';
+        }
+      },
+      onError: (msg) => { btn.disabled = false; output.innerHTML = `<p style="color:#DC2626;font-size:.875rem;">⚠️ ${esc(msg)}</p>`; }
+    });
+  };
+
+  function renderCards(cards, container) {
+    if (!Array.isArray(cards) || !cards.length) {
+      container.innerHTML = '<p style="color:#DC2626;font-size:.875rem;">No cards returned — try again.</p>';
+      return;
+    }
+    container.innerHTML = `<p class="fc-hint">👇 Tap a card to flip (${cards.length} cards generated)</p><div class="fc-grid"></div>`;
+    const grid = container.querySelector('.fc-grid');
+    cards.forEach(c => {
+      const d = document.createElement('div');
+      d.className = 'fc';
+      d.onclick = () => d.classList.toggle('flipped');
+      d.innerHTML = `<span class="fc-q">${esc(c.q||'')}</span><span class="fc-a">${esc(c.a||'')}</span>`;
+      grid.appendChild(d);
+    });
+  }
+
+  // ── Study planner ──
+  window.generatePlan = async function () {
+    const btn     = document.getElementById('pl-btn');
+    const output  = document.getElementById('pl-output');
+    const subject = (document.getElementById('pl-subject').value || '').trim();
+    const date    = document.getElementById('pl-date').value;
+    const hours   = document.getElementById('pl-hours').value || '2';
+    if (!subject || !date) {
+      output.innerHTML = '<p style="color:#DC2626;font-size:.875rem;">Enter subject and exam date.</p>';
+      return;
+    }
+    btn.disabled = true;
+    output.innerHTML = '<div class="panel-loading"><div class="loader-ring" style="width:22px;height:22px;border-width:2px;"></div> Building your plan…</div>';
+
+    const today   = new Date().toISOString().split('T')[0];
+    const notes   = window.notesText ? '\n\nNotes context:\n' + window.notesText.slice(0, 4000) : '';
+
+    await stream({
+      system: 'You are a study planner. Output ONLY a JSON array of tasks — no prose, no markdown wrapper. Format: [{"date":"Apr 18","badge":"Today|Tomorrow|This Week|Upcoming","task":"..."}]',
+      messages: [{ role: 'user', content: `Subject: ${subject}\nExam: ${date}\nToday: ${today}\nHours/day: ${hours}${notes}\n\nGenerate a day-by-day study plan from today to the exam. 2-3 tasks per day. Cover review, practice, and revision. Return only the JSON array.` }],
+      maxTokens: 1500,
+      onDone: (t) => {
+        btn.disabled = false;
+        try {
+          const m = t.match(/\[[\s\S]*\]/);
+          const tasks = JSON.parse(m ? m[0] : t);
+          renderPlan(tasks, output);
+        } catch (_) {
+          output.innerHTML = `<div class="summary-block"><p style="font-size:.9rem;line-height:1.75;color:var(--text);">${esc(t).replace(/\n/g,'<br>')}</p></div>`;
+        }
+      },
+      onError: (msg) => { btn.disabled = false; output.innerHTML = `<p style="color:#DC2626;font-size:.875rem;">⚠️ ${esc(msg)}</p>`; }
+    });
+  };
+
+  function renderPlan(tasks, container) {
+    const badgeMap = { 'Today':'b-now','Tomorrow':'b-tmrw','This Week':'b-soon','Upcoming':'b-soon' };
+    container.innerHTML = '<div class="planner">' +
+      tasks.map(t => `<div class="plan-row">
+        <span class="plan-badge ${badgeMap[t.badge]||'b-soon'}">${esc(t.badge||'Upcoming')}</span>
+        <span class="plan-task">${esc(t.task||'')}</span>
+        <span class="plan-date">${esc(t.date||'')}</span>
+      </div>`).join('') + '</div>';
+  }
+
+  // ── Summarizer ──
+  window.generateSummary = async function () {
+    const btn    = document.getElementById('sum-btn');
+    const output = document.getElementById('sum-output');
+    const paste  = (document.getElementById('sum-paste').value || '').trim();
+    const content = window.notesText || paste;
+    if (!content) {
+      output.innerHTML = '<p style="color:#DC2626;font-size:.875rem;">Upload a file or paste text first.</p>';
+      return;
+    }
+    btn.disabled = true;
+    output.innerHTML = '<div class="panel-loading"><div class="loader-ring" style="width:22px;height:22px;border-width:2px;"></div> Summarizing…</div>';
+
+    let el = null;
+    await stream({
+      system: 'You are a study assistant. Create structured summaries for students. Use **bold** for key terms. Structure: start with "## Key Topics" (comma-separated terms), then "## Core Concepts" (5-7 bullet points starting with -). Be concise.',
+      messages: [{ role: 'user', content: 'Summarize this content for exam prep:\n\n' + content.slice(0, 10000) }],
+      maxTokens: 1500,
+      onChunk: (t) => {
+        if (!el) {
+          output.innerHTML = '<div class="summary-block" id="sum-stream"></div>';
+          el = output.querySelector('#sum-stream');
+        }
+        if (el) el.innerHTML = fmtSummary(t);
+      },
+      onDone: () => { btn.disabled = false; },
+      onError: (msg) => { btn.disabled = false; output.innerHTML = `<p style="color:#DC2626;font-size:.875rem;">⚠️ ${esc(msg)}</p>`; }
+    });
+  };
+
+  function fmtSummary(text) {
+    return esc(text)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^##\s+(.+)$/gm, '<h4 style="font-family:Nunito,sans-serif;font-weight:800;font-size:1rem;color:var(--text);margin:1rem 0 .5rem;">$1</h4>')
+      .replace(/^-\s+(.+)$/gm, '<li style="display:flex;gap:.5rem;margin:.3rem 0 .3rem;font-size:.9375rem;"><span style="color:var(--primary);font-weight:700;flex-shrink:0;">→</span><span>$1</span></li>')
+      .replace(/\n/g, '');
+  }
+
+  document.addEventListener('DOMContentLoaded', updateHint);
+})();
+</script>
+
+</body>
+</html>
